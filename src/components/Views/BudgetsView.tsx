@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
-import CategoryReport from '../reports/CategoryReport';
-import MonthlyTrends from '../reports/MonthlyTrends';
+import CategoryReport from '@/components/reports/CategoryReport.tsx';
+import MonthlyTrends from '@/components/reports/MonthlyTrends';
 import { useTransactions } from '@/hooks/useTransactions';
 
 export default function BudgetsView(): React.JSX.Element {

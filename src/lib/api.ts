@@ -1,6 +1,6 @@
 import { hc } from 'hono/client';
 // CHANGE THIS IMPORT: Remove the /server/ folder
-import type { AppType } from '../index';
+import type { AppType } from '@/index';
 
 const getBaseUrl = () => {
   if (typeof window !== 'undefined') return window.location.origin;
