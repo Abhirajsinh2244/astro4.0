@@ -1,11 +1,9 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
-import node from '@astrojs/node'; // Or vercel(), depending on your adapter
 import path from 'path';
 import { fileURLToPath } from 'url';
 import tailwindcss from '@tailwindcss/vite';
-
 import vercel from '@astrojs/vercel';
 
 // Setup __dirname for ES modules
