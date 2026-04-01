@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import CategoryReport from '@/components/reports/CategoryReport.tsx';
-import MonthlyTrends from '@/components/reports/MonthlyTrends';
-import { useTransactions } from '@/hooks/useTransactions';
+import MonthlyTrends from '@/components/reports/MonthlyTrends.tsx';
+import { useTransactions } from '@/hooks/useTransactions.tsx';
 
 export default function BudgetsView(): React.JSX.Element {
   const { data: transactions, isLoading, error, fetchTransactions } = useTransactions();
