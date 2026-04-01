@@ -1,6 +1,6 @@
 // src/components/views/LoginView.tsx
 import React, { useState } from 'react';
-import { apiClient } from '@/lib/api.ts';
+import { apiFetch } from '@/lib/api.ts';
 import { useAuth } from '@/hooks/useAuth.ts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card.tsx';
 import { Input } from '@/components/ui/input.tsx';
@@ -14,24 +14,27 @@ export default function LoginView(): React.JSX.Element {
   const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-    try {
-      const res = await apiClient.api.auth.login.$post({ json: { email, password } });
-      const data = await res.json();
-      
-      if (data.success && 'token' in data) {
-        login(data.token);
-      } else {
-        setError((data as any).error || 'Authentication rejected.');
-      }
-    } catch (err) {
-      setError('A secure connection could not be established.');
-    } finally {
-      setIsLoading(false);
+  e.preventDefault();
+  setIsLoading(true);
+  setError(null);
+  try {
+    const res = await apiFetch('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    
+    if (res.ok && data.success) {
+      login(data.token);
+    } else {
+      setError(data.error || 'Authentication rejected.');
     }
-  };
+  } catch (err) {
+    setError('A secure connection could not be established.');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <div className="flex min-h-[80vh] items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-background selection:bg-primary/20">

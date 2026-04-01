@@ -1,6 +1,6 @@
 // src/hooks/useTransactions.ts
 import { useState, useCallback } from 'react';
-import { apiClient } from '@/lib/api.ts';
+import { apiFetch } from '@/lib/api.ts';
 import { type Transaction } from '@/lib/types.ts'; 
 
 export function useTransactions() {
@@ -21,20 +21,17 @@ export function useTransactions() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await apiClient.api.transactions.$get();
+      const response = await apiFetch('/api/transactions');
       if (handleAuthError(response.status)) return;
       
-      if (!response.ok) throw new Error(`Server connection failed: ${response.status}`);
-
       const result = await response.json();
-      if (result.success === true && 'data' in result) {
-        setData(result.data as unknown as Transaction[]);
+      if (response.ok && result.success) {
+        setData(result.data);
       } else {
-        throw new Error((result as any).error || 'Failed to retrieve records');
+        throw new Error(result.error || 'Failed to retrieve records');
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'An unexpected error occurred';
-      setError(message);
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -42,16 +39,18 @@ export function useTransactions() {
 
   const addTransaction = async (payload: Omit<Transaction, 'id'>) => {
     try {
-      const response = await apiClient.api.transactions.$post({ json: payload as any });
+      const response = await apiFetch('/api/transactions', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
       if (handleAuthError(response.status)) return false;
 
       const result = await response.json();
-      if (result.success === true) {
-        setData(prev => [(result as any).data as unknown as Transaction, ...prev]);
+      if (response.ok && result.success) {
+        setData(prev => [result.data, ...prev]);
         return true;
-      } else {
-        throw new Error((result as any).error || 'Validation failed');
       }
+      throw new Error(result.error || 'Validation failed');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add transaction');
       return false;
@@ -60,16 +59,18 @@ export function useTransactions() {
 
   const editTransaction = async (id: string, payload: Omit<Transaction, 'id'>) => {
     try {
-      const response = await apiClient.api.transactions[':id'].$put({ param: { id }, json: payload as any });
+      const response = await apiFetch(`/api/transactions/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+      });
       if (handleAuthError(response.status)) return false;
 
       const result = await response.json();
-      if (result.success === true) {
-        setData(prev => prev.map(t => t.id === id ? ((result as any).data as unknown as Transaction) : t));
+      if (response.ok && result.success) {
+        setData(prev => prev.map(t => t.id === id ? result.data : t));
         return true;
-      } else {
-        throw new Error((result as any).error || 'Update failed');
       }
+      throw new Error(result.error || 'Update failed');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update transaction');
       return false;
@@ -78,16 +79,17 @@ export function useTransactions() {
 
   const deleteTransaction = async (id: string) => {
     try {
-      const response = await apiClient.api.transactions[':id'].$delete({ param: { id } });
+      const response = await apiFetch(`/api/transactions/${id}`, {
+        method: 'DELETE'
+      });
       if (handleAuthError(response.status)) return false;
 
       const result = await response.json();
-      if (result.success === true) {
+      if (response.ok && result.success) {
         setData(prev => prev.filter(t => t.id !== id));
         return true;
-      } else {
-        throw new Error((result as any).error || 'Failed to delete record');
       }
+      throw new Error(result.error || 'Failed to delete record');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Delete operation failed');
       return false;

@@ -1,6 +1,4 @@
-import { hc } from 'hono/client';
-// CHANGE THIS IMPORT: Remove the /server/ folder
-import type { AppType } from '@/index.ts';
+// src/lib/api.ts
 
 const getBaseUrl = () => {
   if (typeof window !== 'undefined') return window.location.origin;
@@ -8,13 +6,22 @@ const getBaseUrl = () => {
   return 'http://localhost:4321'; 
 };
 
-export const apiClient = hc<AppType>(getBaseUrl(), {
-  headers: () => {
-    const headers: Record<string, string> = {};
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('ledger_token');
-      if (token) headers.Authorization = `Bearer ${token}`;
+export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
+  const baseUrl = getBaseUrl();
+  const url = `${baseUrl}${endpoint}`;
+
+  const headers = new Headers(options.headers);
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('ledger_token');
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
     }
-    return headers;
   }
-});
+
+  // Ensure JSON content-type for POST/PUT requests
+  if (options.body && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  return fetch(url, { ...options, headers });
+};
