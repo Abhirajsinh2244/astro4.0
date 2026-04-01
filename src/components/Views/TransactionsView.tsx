@@ -1,12 +1,12 @@
 // src/components/views/TransactionsView.tsx
 import React, { useState, useEffect, useMemo } from 'react';
-import { useTransactions } from '../../hooks/useTransactions';
-import { type Transaction, type TransactionType, CATEGORY_MAP } from '../../lib/types';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
-import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
-import { Input } from '../ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { useTransactions } from '@/hooks/useTransactions';
+import { type Transaction, type TransactionType, CATEGORY_MAP } from '@/lib/types';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const ACCOUNTS = ['Checking', 'Credit Card', 'Savings'];
 const STATUSES = ['Cleared', 'Pending'];
