@@ -1,7 +1,9 @@
+// src/components/views/DashboardView.tsx
 import React, { useEffect, useMemo } from 'react';
-import { useTransactions } from '@/hooks/useTransactions';
+import { useTransactions } from '../../hooks/useTransactions';
+import CategoryReport from '../reports/CategoryReport';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
-// ... (keep the rest of DashboardView exactly the same) ...
 export default function DashboardView(): React.JSX.Element {
   const { data: transactions, isLoading, error, fetchTransactions } = useTransactions();
 
@@ -19,13 +21,13 @@ export default function DashboardView(): React.JSX.Element {
   }, [transactions]);
 
   const formatCurrency = (amount: number) => 
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount);
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64 w-full border border-dashed border-gray-300 bg-gray-50 rounded-lg">
-        <span className="text-xs font-bold tracking-widest text-gray-500 uppercase">
-          Initializing SpendWise Telemetry...
+      <div className="flex justify-center items-center h-[60vh]">
+        <span className="text-sm font-bold tracking-widest text-primary uppercase animate-pulse">
+          Syncing Ledger Data...
         </span>
       </div>
     );
@@ -33,81 +35,66 @@ export default function DashboardView(): React.JSX.Element {
 
   if (error) {
     return (
-      <div className="bg-red-50 p-6 rounded-lg border-l-4 border-red-600">
-        <p className="text-xs font-black text-red-800 uppercase tracking-widest">System Fault Detected</p>
-        <p className="text-sm text-red-700 mt-2 font-medium">{error}</p>
-      </div>
+      <Card className="border-destructive/50 bg-destructive/10">
+        <CardContent className="pt-6">
+          <p className="text-sm font-bold text-destructive uppercase tracking-wide">System Error</p>
+          <p className="text-sm text-destructive/80 mt-1">{error}</p>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="space-y-12 animate-in fade-in duration-700">
-      
-      {/* Page Header Header */}
-      <div className="border-b border-gray-200 pb-6">
-        <h1 className="text-4xl font-black text-gray-900 tracking-tighter">SpendWise Dashboard</h1>
-        <p className="text-sm text-gray-500 mt-2 font-medium tracking-wide">
-          Real-time aggregation of your financial ledger.
-        </p>
+    <div className="space-y-8 animate-in fade-in duration-700 pb-12">
+      <div className="flex flex-col space-y-1.5 mb-8">
+        <h1 className="text-4xl font-black text-foreground tracking-tighter">Financial Overview</h1>
+        <p className="text-lg text-muted-foreground font-medium">Your high-level financial summary at a glance.</p>
       </div>
 
-      {/* Primary Telemetry Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        
-        {/* Metric Card: Net Balance */}
-        <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200 flex flex-col justify-center transition-all hover:shadow-md">
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3">
-            Net Capital Balance
-          </p>
-          <h3 className={`text-5xl font-black tracking-tighter ${balance >= 0 ? 'text-gray-900' : 'text-red-600'}`}>
-            {formatCurrency(balance)}
-          </h3>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        <Card className="border-border shadow-sm hover:shadow-md transition-shadow duration-300">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+              Net Balance
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <h3 className="text-4xl font-black text-foreground tracking-tighter">
+              {formatCurrency(balance)}
+            </h3>
+          </CardContent>
+        </Card>
 
-        {/* Metric Card: Total Income */}
-        <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200 flex flex-col justify-center border-t-4 border-t-emerald-500 transition-all hover:shadow-md">
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3">
-            Inbound Cash Flow
-          </p>
-          <h3 className="text-4xl font-extrabold text-emerald-600 tracking-tight">
-            {formatCurrency(totalIncome)}
-          </h3>
-        </div>
+        <Card className="border-border shadow-sm hover:shadow-md transition-shadow duration-300 border-l-4 border-l-emerald-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+              Total Income
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <h3 className="text-4xl font-black text-emerald-600 tracking-tighter">
+              {formatCurrency(totalIncome)}
+            </h3>
+          </CardContent>
+        </Card>
 
-        {/* Metric Card: Total Expenses */}
-        <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200 flex flex-col justify-center border-t-4 border-t-red-500 transition-all hover:shadow-md">
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3">
-            Outbound Cash Flow
-          </p>
-          <h3 className="text-4xl font-extrabold text-red-600 tracking-tight">
-            {formatCurrency(totalExpenses)}
-          </h3>
-        </div>
+        <Card className="border-border shadow-sm hover:shadow-md transition-shadow duration-300 border-l-4 border-l-destructive">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+              Total Expenses
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <h3 className="text-4xl font-black text-destructive tracking-tighter">
+              {formatCurrency(totalExpenses)}
+            </h3>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Typography-Driven Information Block */}
-      <div className="bg-gray-900 text-white p-10 rounded-xl shadow-xl">
-        <h2 className="text-2xl font-bold tracking-tight mb-4">Ledger Integrity Status</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 border-t border-gray-700 pt-6">
-          <div>
-            <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Total Entries</p>
-            <p className="text-xl font-medium">{transactions.length}</p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Data Source</p>
-            <p className="text-xl font-medium">Supabase PG</p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Status</p>
-            <p className="text-xl font-medium text-emerald-400">Synchronized</p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Last Update</p>
-            <p className="text-xl font-medium">Just Now</p>
-          </div>
-        </div>
+      <div className="mt-12">
+        <CategoryReport transactions={transactions} />
       </div>
-
     </div>
   );
 }

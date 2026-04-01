@@ -1,10 +1,8 @@
 ---
-import Layout from '@/layouts/Layout.astro';
-import TransactionsView from '@/components/Views/TransactionsView';
+import Layout from '../layouts/Layout.astro';
+import TransactionsView from '../components/views/TransactionsView';
 ---
 
-<Layout title="SpendWise | Master Ledger">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-    <TransactionsView client:load />
-  </div>
+<Layout title="Transactions">
+  <TransactionsView client:load />
 </Layout>

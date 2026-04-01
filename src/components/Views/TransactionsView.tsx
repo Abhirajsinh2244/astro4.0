@@ -1,89 +1,80 @@
+// src/components/views/TransactionsView.tsx
 import React, { useState, useEffect, useMemo } from 'react';
-import { useTransactions } from '@/hooks/useTransactions';
-import { type TransactionType, type Transaction, CATEGORY_MAP } from '@/lib/types';
-import { Calendar } from 'lucide-react';
+import { useTransactions } from '../../hooks/useTransactions';
+import { type Transaction, type TransactionType, CATEGORY_MAP } from '../../lib/types';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
+import { Input } from '../ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
 const ACCOUNTS = ['Checking', 'Credit Card', 'Savings'];
 const STATUSES = ['Cleared', 'Pending'];
 
-const defaultFormData = {
-  date: new Date().toISOString().split('T')[0],
-  merchant: '',
-  category: 'Food & Drink',
-  description: '',
-  amount: '',
-  account: 'Checking',
-  status: 'Cleared' as const
-};
-
-// Helper for category emojis (optional, based on your screenshot's vibe)
-const getCategoryIcon = (category: string) => {
-  const icons: Record<string, string> = {
-    'Food & Drink': '🍔',
-    'Groceries': '🛒',
-    'Transport': '🚗',
-    'Entertainment': '📺',
-    'Utilities': '💡',
-    'Payroll': '💵',
-    'Investments': '📈'
-  };
-  return icons[category] || '🏷️';
-};
-
 export default function TransactionsView(): React.JSX.Element {
-  const { 
-    data: transactions, 
-    isLoading, 
-    error, 
-    fetchTransactions, 
-    addTransaction, 
-    editTransaction, 
-    deleteTransaction 
-  } = useTransactions();
+  const { data: transactions, isLoading, error, fetchTransactions, addTransaction, editTransaction, deleteTransaction } = useTransactions();
   
-  // --- Filter State ---
-  const [filterCategory, setFilterCategory] = useState('All');
-  const [filterAccount, setFilterAccount] = useState('All');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [filterCategory, setFilterCategory] = useState('All');
+  const [filterAccount, setFilterAccount] = useState('All');
   
-  // --- Pagination State ---
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // --- Modal & Form State ---
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [transactionType, setTransactionType] = useState<TransactionType>('expense');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState(defaultFormData);
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
+  
+  const [formData, setFormData] = useState({
+    date: new Date().toISOString().split('T')[0],
+    merchant: '',
+    category: 'Food & Drink',
+    description: '',
+    amount: '',
+    account: 'Checking',
+    status: 'Cleared'
+  });
 
-  useEffect(() => { 
-    fetchTransactions(); 
-  }, [fetchTransactions]);
+  useEffect(() => { fetchTransactions(); }, [fetchTransactions]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filterCategory, filterAccount, startDate, endDate]);
+  const dynamicCategories = useMemo(() => {
+    const baseCats = new Set(Object.keys(CATEGORY_MAP));
+    transactions.forEach(tx => baseCats.add(tx.category));
+    return Array.from(baseCats).sort();
+  }, [transactions]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+    if (name === 'category' && value === 'NEW_CUSTOM_CATEGORY') {
+      setIsCustomCategory(true);
+      setFormData(prev => ({ ...prev, category: '' }));
+      return;
+    }
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleOpenAdd = (type: TransactionType) => {
+  const closeModal = () => {
+    setIsModalOpen(false);
     setEditingId(null);
-    setTransactionType(type);
+    setIsCustomCategory(false);
     setFormData({
-      ...defaultFormData,
       date: new Date().toISOString().split('T')[0],
+      merchant: '',
+      category: 'Food & Drink',
+      description: '',
+      amount: '',
+      account: 'Checking',
+      status: 'Cleared'
     });
-    setIsModalOpen(true);
   };
 
-  const handleOpenEdit = (tx: Transaction) => {
-    setEditingId(tx.id);
+  const handleEditClick = (tx: Transaction) => {
     setTransactionType(tx.type);
+    setEditingId(tx.id);
+    setIsCustomCategory(false);
     setFormData({
       date: tx.date,
       merchant: tx.merchant,
@@ -99,38 +90,25 @@ export default function TransactionsView(): React.JSX.Element {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
     const payload = { 
       ...formData, 
+      category: formData.category.trim(),
       amount: parseFloat(formData.amount), 
       type: transactionType 
     };
 
-    let success = false;
-
-    if (editingId) {
-      success = await editTransaction(editingId, payload);
-    } else {
-      success = await addTransaction(payload);
-    }
-
-    if (success) {
-      setIsModalOpen(false);
-      setEditingId(null);
-      setFormData(defaultFormData);
-    }
-    
+    let success = editingId ? await editTransaction(editingId, payload) : await addTransaction(payload);
+    if (success) closeModal();
     setIsSubmitting(false);
   };
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter(t => {
-      const matchCategory = filterCategory === 'All' || t.category === filterCategory;
-      const matchAccount = filterAccount === 'All' || t.account === filterAccount;
-      const matchStartDate = !startDate || t.date >= startDate;
-      const matchEndDate = !endDate || t.date <= endDate;
-
-      return matchCategory && matchAccount && matchStartDate && matchEndDate;
+      const matchCat = filterCategory === 'All' || t.category === filterCategory;
+      const matchAcc = filterAccount === 'All' || t.account === filterAccount;
+      let matchDate = true;
+      if (startDate && endDate) matchDate = t.date >= startDate && t.date <= endDate;
+      return matchCat && matchAcc && matchDate;
     });
   }, [transactions, filterCategory, filterAccount, startDate, endDate]);
 
@@ -138,219 +116,215 @@ export default function TransactionsView(): React.JSX.Element {
   const currentTransactions = filteredTransactions.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const formatCurrency = (amount: number, type: TransactionType) => {
-    const formatted = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+    const formatted = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount);
     return type === 'expense' ? `-${formatted}` : `+${formatted}`;
   };
 
+  const formatDate = (dateString: string) => {
+    if (!dateString) return '';
+    const [year, month, day] = dateString.split('-');
+    return `${day}/${month}/${year}`;
+  };
+
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      
-      {/* Page Header */}
-      <div className="border-b border-gray-200 pb-6">
-        <h1 className="text-4xl font-black text-gray-900 tracking-tighter">Master Ledger</h1>
-        <p className="text-sm text-gray-500 mt-2 font-medium tracking-wide">Immutable transaction records.</p>
+    <div className="space-y-8 pb-12 animate-in fade-in duration-700">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+        <div className="flex flex-col space-y-1.5">
+          <h1 className="text-4xl font-black text-foreground tracking-tighter">Transactions Ledger</h1>
+          <p className="text-lg text-muted-foreground font-medium">Manage and filter your secure transaction history.</p>
+        </div>
+        {error && <Badge variant="destructive" className="px-4 py-1.5 text-sm uppercase tracking-widest">{error}</Badge>}
       </div>
 
-      {/* Advanced Filter Container */}
-      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm flex flex-col lg:flex-row gap-6 items-end">
-        <div className="flex-1 w-full">
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Date Range</label>
-          <div className="flex items-center gap-2 border border-gray-300 rounded-lg px-3 py-2 bg-white focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-transparent transition-all">
-            <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
-            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="bg-transparent border-none outline-none text-sm w-full text-gray-700 placeholder-gray-400 [&::-webkit-calendar-picker-indicator]:opacity-50" />
-            <span className="text-gray-300 font-medium">-</span>
-            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="bg-transparent border-none outline-none text-sm w-full text-gray-700 placeholder-gray-400 [&::-webkit-calendar-picker-indicator]:opacity-50" />
-          </div>
-        </div>
-
-        <div className="flex-1 w-full">
-           <label className="block text-sm font-semibold text-gray-700 mb-2">Categories</label>
-           <div className="relative">
-             <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-700 bg-white outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all appearance-none cursor-pointer">
+      <Card className="border-border shadow-sm">
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Date Range</label>
+              <div className="flex items-center space-x-2">
+                <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full font-medium" />
+                <span className="text-muted-foreground font-black text-xs uppercase">To</span>
+                <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full font-medium" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Category Filter</label>
+              <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="flex h-8 w-full items-center justify-between rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50">
                 <option value="All">All Categories</option>
-                {Object.keys(CATEGORY_MAP).map(cat => <option key={cat} value={cat}>{cat}</option>)}
-             </select>
-             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
-               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-             </div>
-           </div>
-        </div>
-
-        <div className="flex-1 w-full">
-           <label className="block text-sm font-semibold text-gray-700 mb-2">Account</label>
-           <div className="relative">
-             <select value={filterAccount} onChange={e => setFilterAccount(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-700 bg-white outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all appearance-none cursor-pointer">
+                {dynamicCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Account Filter</label>
+              <select value={filterAccount} onChange={(e) => setFilterAccount(e.target.value)} className="flex h-8 w-full items-center justify-between rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50">
                 <option value="All">All Accounts</option>
                 {ACCOUNTS.map(acc => <option key={acc} value={acc}>{acc}</option>)}
-             </select>
-             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
-               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-             </div>
-           </div>
-        </div>
-      </div>
-
-      {error && (
-        <div className="bg-red-50 p-4 rounded border-l-4 border-red-600">
-          <p className="text-xs font-black text-red-800 uppercase tracking-widest">Network Error</p>
-          <p className="text-sm text-red-700 mt-1">{error}</p>
-        </div>
-      )}
-
-      {/* Main Table Area */}
-      <div className="bg-white shadow-sm border border-gray-200 rounded-xl overflow-hidden">
-        <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-          <div className="hidden md:flex items-center text-sm font-bold text-gray-700">
-            Recent Transactions
+              </select>
+            </div>
           </div>
-          <div className="flex gap-3">
-            <button 
-              onClick={() => handleOpenAdd('expense')} 
-              className="bg-emerald-500 text-white px-4 py-2 text-sm font-bold rounded-lg hover:bg-emerald-600 transition-colors flex items-center gap-2 shadow-sm"
-            >
-              <span>+</span> Record Expense
-            </button>
-            <button 
-              onClick={() => handleOpenAdd('income')} 
-              className="bg-white border border-gray-300 text-gray-700 px-4 py-2 text-sm font-bold rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2 shadow-sm"
-            >
-              <span>+</span> Record Income
-            </button>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-border flex flex-col sm:flex-row justify-between items-center gap-4 bg-card">
+          <h2 className="text-xl font-bold text-foreground tracking-tight">Recent Records</h2>
+          <div className="flex space-x-3">
+            <Button variant="default" onClick={() => { setTransactionType('expense'); setIsModalOpen(true); }} className="font-bold tracking-widest uppercase text-xs px-6">
+              Record Expense
+            </Button>
+            <Button variant="outline" onClick={() => { setTransactionType('income'); setIsModalOpen(true); }} className="font-bold tracking-widest uppercase text-xs px-6">
+              Record Income
+            </Button>
           </div>
         </div>
 
-        <div className="overflow-x-auto min-h-[400px]">
-          <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-white">
-              <tr>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 border-b border-gray-200">Date</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 border-b border-gray-200">Merchant</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 border-b border-gray-200">Category</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 border-b border-gray-200">Description</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 border-b border-gray-200 text-right">Amount</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 border-b border-gray-200">Account</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 border-b border-gray-200 text-center">Status</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 border-b border-gray-200 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
+        <div className="min-h-[400px]">
+          <Table>
+            <TableHeader className="bg-muted/30">
+              <TableRow>
+                <TableHead className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Date</TableHead>
+                <TableHead className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Merchant</TableHead>
+                <TableHead className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Category</TableHead>
+                <TableHead className="text-xs font-bold uppercase tracking-widest text-muted-foreground hidden md:table-cell">Description</TableHead>
+                <TableHead className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Amount</TableHead>
+                <TableHead className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Account</TableHead>
+                <TableHead className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Status</TableHead>
+                <TableHead className="text-xs font-bold uppercase tracking-widest text-muted-foreground text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {isLoading ? (
-                <tr>
-                  <td colSpan={8} className="px-6 py-20 text-center">
-                    <span className="text-xs font-bold tracking-widest text-gray-400 uppercase">Fetching Ledger Data...</span>
-                  </td>
-                </tr>
+                <TableRow>
+                  <TableCell colSpan={8} className="h-32 text-center text-sm font-bold tracking-widest uppercase text-muted-foreground animate-pulse">
+                    Retrieving Ledger...
+                  </TableCell>
+                </TableRow>
               ) : currentTransactions.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-6 py-20 text-center text-gray-400 font-medium tracking-wide">
-                    NO RECORDS FOUND
-                  </td>
-                </tr>
+                <TableRow>
+                  <TableCell colSpan={8} className="h-32 text-center text-sm font-medium text-muted-foreground">
+                    No transactions map to the current parameters.
+                  </TableCell>
+                </TableRow>
               ) : (
                 currentTransactions.map((tx) => (
-                  <tr key={tx.id} className="hover:bg-gray-50 transition-colors group">
-                    <td className="px-6 py-4 font-medium text-gray-900">{tx.date}</td>
-                    <td className="px-6 py-4 text-gray-700">{tx.merchant}</td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-50 text-gray-700 border border-yellow-100">
-                        {getCategoryIcon(tx.category)} {tx.category}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-gray-500 text-sm">{tx.description || '-'}</td>
-                    <td className={`px-6 py-4 font-bold text-right ${tx.type === 'expense' ? 'text-red-600' : 'text-emerald-500'}`}>
+                  <TableRow key={tx.id} className="group transition-colors">
+                    <TableCell className="font-semibold text-foreground whitespace-nowrap">{formatDate(tx.date)}</TableCell>
+                    <TableCell className="font-medium text-foreground">{tx.merchant}</TableCell>
+                    <TableCell className="font-medium text-muted-foreground">{tx.category}</TableCell>
+                    <TableCell className="text-muted-foreground max-w-[200px] truncate hidden md:table-cell" title={tx.description}>{tx.description || '—'}</TableCell>
+                    <TableCell className={`font-black tracking-tight whitespace-nowrap ${tx.type === 'expense' ? 'text-destructive' : 'text-emerald-600'}`}>
                       {formatCurrency(tx.amount, tx.type)}
-                    </td>
-                    <td className="px-6 py-4 text-gray-700">{tx.account}</td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${tx.status === 'Cleared' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}`}>
+                    </TableCell>
+                    <TableCell className="font-medium text-muted-foreground">{tx.account}</TableCell>
+                    <TableCell>
+                      <Badge variant={tx.status === 'Cleared' ? 'secondary' : 'outline'} className="uppercase font-bold tracking-wider text-[10px]">
                         {tx.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right space-x-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => handleOpenEdit(tx)} className="text-xs font-bold text-blue-500 hover:text-blue-700 transition-all">Edit</button>
-                      <button onClick={() => deleteTransaction(tx.id)} className="text-xs font-bold text-red-400 hover:text-red-600 transition-all">Void</button>
-                    </td>
-                  </tr>
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      <button onClick={() => handleEditClick(tx)} className="text-[10px] font-black tracking-widest text-emerald-600 hover:text-emerald-800 uppercase transition-all mr-4 opacity-0 group-hover:opacity-100 focus:opacity-100">
+                        Edit
+                      </button>
+                      <button onClick={() => deleteTransaction(tx.id)} className="text-[10px] font-black tracking-widest text-destructive hover:text-red-800 uppercase transition-all opacity-0 group-hover:opacity-100 focus:opacity-100">
+                        Delete
+                      </button>
+                    </TableCell>
+                  </TableRow>
                 ))
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
-        {/* Pagination */}
-        <div className="p-4 border-t border-gray-200 flex justify-between bg-gray-50 text-xs font-bold uppercase tracking-widest">
-          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="text-gray-900 disabled:text-gray-300 hover:text-gray-600 transition-colors">
-            PREV
-          </button>
-          <span className="text-gray-500">PAGE {currentPage} OF {totalPages}</span>
-          <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="text-gray-900 disabled:text-gray-300 hover:text-gray-600 transition-colors">
-            NEXT
-          </button>
-        </div>
-      </div>
-
-      {/* Data Entry/Edit Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg animate-in zoom-in-95 duration-200 border border-gray-100">
-            <h3 className="text-xl font-bold text-gray-900 mb-6 border-b border-gray-100 pb-4">
-              {editingId ? 'Edit' : 'Record'} {transactionType === 'expense' ? 'Expense' : 'Income'}
-            </h3>
-            
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="grid grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Date</label>
-                  <input required type="date" name="date" value={formData.date} onChange={handleInputChange} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Amount</label>
-                  <input required type="number" step="0.01" min="0.01" name="amount" value={formData.amount} onChange={handleInputChange} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-bold focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all" placeholder="0.00" />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{transactionType === 'expense' ? 'Merchant' : 'Source'}</label>
-                <input required type="text" name="merchant" value={formData.merchant} onChange={handleInputChange} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all" placeholder="e.g. Server Hosting" />
-              </div>
-
-              {/* NEW DESCRIPTION FIELD */}
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Description (Optional)</label>
-                <input type="text" name="description" value={formData.description} onChange={handleInputChange} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-600 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all" placeholder="Add notes or details..." />
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="col-span-1">
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Category</label>
-                  <select name="category" value={formData.category} onChange={handleInputChange} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none cursor-pointer">
-                    {Object.keys(CATEGORY_MAP).map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                  </select>
-                </div>
-                <div className="col-span-1">
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Account</label>
-                  <select name="account" value={formData.account} onChange={handleInputChange} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none cursor-pointer">
-                    {ACCOUNTS.map(acc => <option key={acc} value={acc}>{acc}</option>)}
-                  </select>
-                </div>
-                <div className="col-span-1">
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Status</label>
-                  <select name="status" value={formData.status} onChange={handleInputChange} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none cursor-pointer">
-                    {STATUSES.map(stat => <option key={stat} value={stat}>{stat}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 mt-6">
-                <button type="button" onClick={() => setIsModalOpen(false)} disabled={isSubmitting} className="px-4 py-2 text-sm font-bold text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
-                  Cancel
-                </button>
-                <button type="submit" disabled={isSubmitting} className="bg-emerald-500 text-white px-6 py-2 text-sm font-bold rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 shadow-sm">
-                  {isSubmitting ? 'Saving...' : 'Save Transaction'}
-                </button>
-              </div>
-            </form>
+        <div className="p-4 border-t border-border flex items-center justify-between bg-muted/10">
+          <div className="text-sm font-medium text-muted-foreground">
+            Page <span className="font-black text-foreground">{currentPage}</span> of <span className="font-black text-foreground">{totalPages}</span>
           </div>
+          <div className="flex space-x-6">
+            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="text-xs font-black uppercase tracking-widest text-foreground disabled:text-muted disabled:cursor-not-allowed hover:underline underline-offset-4">
+              Previous
+            </button>
+            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="text-xs font-black uppercase tracking-widest text-foreground disabled:text-muted disabled:cursor-not-allowed hover:underline underline-offset-4">
+              Next
+            </button>
+          </div>
+        </div>
+      </Card>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <Card className="w-full max-w-lg shadow-2xl border-border animate-in zoom-in-95 duration-200">
+            <CardHeader className="pb-4 border-b border-border/50">
+              <CardTitle className="text-2xl font-black text-foreground tracking-tighter uppercase">
+                {editingId ? 'Modify' : 'Commit'} {transactionType}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Date</label>
+                    <Input required type="date" name="date" value={formData.date} onChange={handleInputChange} className="font-medium" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Amount</label>
+                    <Input required type="number" step="0.01" min="0.01" name="amount" value={formData.amount} onChange={handleInputChange} className="font-medium" placeholder="0.00" />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{transactionType === 'expense' ? 'Merchant' : 'Source'}</label>
+                  <Input required type="text" name="merchant" value={formData.merchant} onChange={handleInputChange} className="font-medium" placeholder="Entity name..." />
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Description</label>
+                  <Input type="text" name="description" value={formData.description} onChange={handleInputChange} className="font-medium" placeholder="Optional context..." />
+                </div>
+
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Category</label>
+                    {isCustomCategory ? (
+                      <div className="flex flex-col space-y-2">
+                        <Input required autoFocus type="text" name="category" value={formData.category} onChange={handleInputChange} className="font-bold text-primary border-primary focus-visible:ring-primary" placeholder="New Category..." />
+                        <button type="button" onClick={() => { setIsCustomCategory(false); setFormData(prev => ({...prev, category: 'Food & Drink'})); }} className="text-[10px] self-start font-black tracking-widest text-muted-foreground hover:text-destructive transition-colors uppercase">
+                          Cancel Custom
+                        </button>
+                      </div>
+                    ) : (
+                      <select name="category" value={formData.category} onChange={handleInputChange} className="flex h-8 w-full items-center justify-between rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring">
+                        {dynamicCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                        <option disabled>──────────</option>
+                        <option value="NEW_CUSTOM_CATEGORY" className="font-bold text-primary">Create Custom...</option>
+                      </select>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Account & State</label>
+                    <div className="flex space-x-2">
+                      <select name="account" value={formData.account} onChange={handleInputChange} className="flex h-8 w-2/3 items-center justify-between rounded-lg border border-input bg-transparent px-3 py-1 text-[11px] font-bold uppercase tracking-wider shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring">
+                        {ACCOUNTS.map(acc => <option key={acc} value={acc}>{acc}</option>)}
+                      </select>
+                      <select name="status" value={formData.status} onChange={handleInputChange} className="flex h-8 w-1/3 items-center justify-between rounded-lg border border-input bg-transparent px-2 py-1 text-[11px] font-bold uppercase tracking-wider shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring">
+                        {STATUSES.map(stat => <option key={stat} value={stat}>{stat}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-4 pt-6 border-t border-border/50">
+                  <Button type="button" variant="ghost" onClick={closeModal} disabled={isSubmitting} className="font-bold tracking-widest uppercase text-xs">
+                    Dismiss
+                  </Button>
+                  <Button type="submit" disabled={isSubmitting} className="font-bold tracking-widest uppercase text-xs px-8">
+                    {isSubmitting ? 'Processing...' : (editingId ? 'Save Configuration' : 'Commit Record')}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>

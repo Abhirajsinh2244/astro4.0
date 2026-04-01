@@ -1,6 +1,6 @@
 ---
-import '@/styles/global.css';
-import TopNav from '@/components/layout/TopNav'; // Ensure capitalization matches your exact folder name!
+import '../styles/global.css';
+import TopNav from '../components/layout/TopNav';
 
 interface Props {
   title: string;
@@ -14,13 +14,24 @@ const { title } = Astro.props;
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Professional Financial Ledger" />
-    <title>{title}</title>
-  </head>
-  <body class="min-h-screen flex flex-col">
-    <TopNav client:load />
+    <title>{title} | LedgerPro</title>
     
-    <main class="flex-1 w-full bg-background">
+    <script is:inline>
+      // Client-side execution blocks unauthorized access before hydration
+      const publicPaths = ['/login', '/register', '/'];
+      const token = localStorage.getItem('ledger_token');
+      const isPublic = publicPaths.includes(window.location.pathname);
+      
+      if (!token && !isPublic) {
+        window.location.href = '/login';
+      } else if (token && (window.location.pathname === '/login' || window.location.pathname === '/register' || window.location.pathname === '/')) {
+        window.location.href = '/dashboard';
+      }
+    </script>
+  </head>
+  <body class="min-h-screen bg-gray-50/50 font-sans text-gray-800 flex flex-col antialiased selection:bg-emerald-100 selection:text-emerald-900">
+    <TopNav client:load />
+    <main class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <slot />
     </main>
   </body>
