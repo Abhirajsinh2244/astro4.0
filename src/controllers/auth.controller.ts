@@ -4,9 +4,9 @@ import { sign } from 'hono/jwt';
 import bcrypt from 'bcryptjs';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { supabase } from '../db/index';
-import { ApiResponse } from '../utils/ApiResponse';
-import type { AuthDTO } from '../models/auth.model';
+import { supabase } from '@/db/index.ts';
+import { ApiResponse } from '@/utils/ApiResponse.ts';
+import type { AuthDTO } from '@/models/auth.model.ts';
 
 const authSchema = z.object({
   email: z.string().email(),

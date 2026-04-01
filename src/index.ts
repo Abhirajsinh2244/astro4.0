@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
 import { logger } from 'hono/logger';
 import { secureHeaders } from 'hono/secure-headers';
-import transactionRoutes from '@/routes/transaction.routes'; // <-- IMPORT ADDED
-import authRoutes from '@/routes/auth.routes'; // <-- IMPORT ADDED
+import transactionRoutes from '@/routes/transaction.routes.ts'; // <-- IMPORT ADDED
+import authRoutes from '@/routes/auth.routes.ts'; // <-- IMPORT ADDED
 
 const app = new Hono();
 

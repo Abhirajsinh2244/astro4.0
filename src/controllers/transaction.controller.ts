@@ -1,8 +1,8 @@
 import type { Context } from 'hono';
 import { randomUUID } from 'crypto';
-import { supabase } from '@/db/index';
-import { ApiResponse } from '@/utils/ApiResponse';
-import type { TransactionDTO } from '@/models/transaction.model';
+import { supabase } from '@/db/index.ts';
+import { ApiResponse } from '@/utils/ApiResponse.ts';
+import type { TransactionDTO } from '@/models/transaction.model.ts';
 
 interface JwtPayload { sub: string; }
 

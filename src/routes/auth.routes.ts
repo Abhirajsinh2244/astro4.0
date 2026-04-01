@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { authSchema } from '@/models/auth.model';
-import { registerUser, loginUser } from '@/controllers/auth.controller';
-import { ApiResponse } from '@/utils/ApiResponse';
+import { authSchema } from '@/models/auth.model.ts';
+import { registerUser, loginUser } from '@/controllers/auth.controller.ts';
+import { ApiResponse } from '@/utils/ApiResponse.ts';
 
 // Reusable validation middleware for auth routes
 const validateAuth = zValidator('json', authSchema, (result, c) => {

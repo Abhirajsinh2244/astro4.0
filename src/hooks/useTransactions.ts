@@ -1,7 +1,7 @@
 // src/hooks/useTransactions.ts
 import { useState, useCallback } from 'react';
-import { apiClient } from '../lib/api';
-import { type Transaction } from '../lib/types'; 
+import { apiClient } from '@/lib/api.ts';
+import { type Transaction } from '@/lib/types.ts'; 
 
 export function useTransactions() {
   const [data, setData] = useState<Transaction[]>([]);

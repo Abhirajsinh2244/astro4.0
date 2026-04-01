@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { useTransactions } from '@/hooks/useTransactions.ts';
 import CategoryReport from '@/components/reports/CategoryReport.tsx';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.tsx';
 
 export default function DashboardView(): React.JSX.Element {
   const { data: transactions, isLoading, error, fetchTransactions } = useTransactions();

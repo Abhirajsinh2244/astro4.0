@@ -8,7 +8,7 @@ import {
   Tooltip as RechartsTooltip, 
   ResponsiveContainer 
 } from 'recharts';
-import { type Transaction } from '@/lib/types'; // Adjust this import path if your types.ts is located elsewhere
+import { type Transaction } from '@/lib/types.ts'; // Adjust this import path if your types.ts is located elsewhere
 import { format, parseISO, subMonths } from 'date-fns';
 
 interface MonthlyTrendsProps {

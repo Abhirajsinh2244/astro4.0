@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { verifyJWT } from '@/middleware/auth.middleware';
-import { transactionSchema } from '@/models/transaction.model';
-import { getAllTransactions, createTransaction, deleteTransaction } from '@/controllers/transaction.controller';
+import { verifyJWT } from '@/middleware/auth.middleware.ts';
+import { transactionSchema } from '@/models/transaction.model.ts';
+import { getAllTransactions, createTransaction, deleteTransaction } from '@/controllers/transaction.controller.ts';
 
 // FIX: Chain the middleware and route methods to preserve type inference
 const router = new Hono()

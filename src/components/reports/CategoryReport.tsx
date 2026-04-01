@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Pie, PieChart, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
-import { type Transaction, CATEGORY_MAP } from '@/lib/types';
+import { type Transaction, CATEGORY_MAP } from '@/lib/types.ts';
 import { startOfMonth, startOfYear, subMonths, subYears, isWithinInterval } from 'date-fns';
 
 interface CategoryReportProps {
