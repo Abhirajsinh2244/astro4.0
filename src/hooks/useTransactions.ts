@@ -1,108 +1,92 @@
+// src/hooks/useTransactions.ts
 import { useState, useCallback } from 'react';
-import type { Transaction, TransactionPayload, ApiResponse } from '@/lib/types'; 
-
-// ... (keep the rest of the useTransactions hook logic exactly the same, only the import changed) ... 
+import { apiClient } from '../lib/api';
+import { type Transaction } from '../lib/types'; 
 
 export function useTransactions() {
   const [data, setData] = useState<Transaction[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Helper for consistent headers
-  const getHeaders = () => ({
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
-  });
+  const handleAuthError = (status: number) => {
+    if (status === 401) {
+      localStorage.removeItem('ledger_token');
+      window.location.href = '/login';
+      return true;
+    }
+    return false;
+  };
 
   const fetchTransactions = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/transactions', {
-        method: 'GET',
-        headers: getHeaders()
-      });
+      const response = await apiClient.api.transactions.$get();
+      if (handleAuthError(response.status)) return;
       
-      if (!response.ok) throw new Error(`Network protocol error: ${response.status}`);
+      if (!response.ok) throw new Error(`Server connection failed: ${response.status}`);
 
-      const result: ApiResponse<Transaction[]> = await response.json();
-
-      if (result.success && result.data) {
-        setData(result.data);
+      const result = await response.json();
+      if (result.success === true && 'data' in result) {
+        setData(result.data as unknown as Transaction[]);
       } else {
-        throw new Error(result.error || 'Failed to retrieve ledger data');
+        throw new Error((result as any).error || 'Failed to retrieve records');
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'An unexpected failure occurred';
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred';
       setError(message);
-      console.error('[SpendWise System]:', message);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  const addTransaction = async (payload: TransactionPayload): Promise<boolean> => {
+  const addTransaction = async (payload: Omit<Transaction, 'id'>) => {
     try {
-      const response = await fetch('/api/transactions', {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify(payload)
-      });
-      
-      const result: ApiResponse<Transaction> = await response.json();
+      const response = await apiClient.api.transactions.$post({ json: payload as any });
+      if (handleAuthError(response.status)) return false;
 
-      if (result.success && result.data) {
-        const newData = result.data;
-        setData(prev => [newData, ...prev]);
+      const result = await response.json();
+      if (result.success === true) {
+        setData(prev => [(result as any).data as unknown as Transaction, ...prev]);
         return true;
       } else {
-        console.error('[SpendWise Validation]:', result.details);
-        throw new Error(result.error || 'Validation rejected by server');
+        throw new Error((result as any).error || 'Validation failed');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Commit operation failed');
+      setError(err instanceof Error ? err.message : 'Failed to add transaction');
       return false;
     }
   };
 
-  const editTransaction = async (id: string, payload: TransactionPayload): Promise<boolean> => {
+  const editTransaction = async (id: string, payload: Omit<Transaction, 'id'>) => {
     try {
-      const response = await fetch(`/api/transactions/${id}`, {
-        method: 'PUT',
-        headers: getHeaders(),
-        body: JSON.stringify(payload)
-      });
+      const response = await apiClient.api.transactions[':id'].$put({ param: { id }, json: payload as any });
+      if (handleAuthError(response.status)) return false;
 
-      const result: ApiResponse<Transaction> = await response.json();
-
-      if (result.success && result.data) {
-        const updatedData = result.data;
-        setData(prev => prev.map(t => t.id === id ? updatedData : t));
+      const result = await response.json();
+      if (result.success === true) {
+        setData(prev => prev.map(t => t.id === id ? ((result as any).data as unknown as Transaction) : t));
         return true;
       } else {
-        console.error('[SpendWise Validation]:', result.details);
-        throw new Error(result.error || 'Modification rejected by server');
+        throw new Error((result as any).error || 'Update failed');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Update operation failed');
+      setError(err instanceof Error ? err.message : 'Failed to update transaction');
       return false;
     }
   };
 
-  const deleteTransaction = async (id: string): Promise<boolean> => {
+  const deleteTransaction = async (id: string) => {
     try {
-      const response = await fetch(`/api/transactions/${id}`, {
-        method: 'DELETE',
-        headers: getHeaders()
-      });
-      
-      const result: ApiResponse<{ deletedId: string }> = await response.json();
+      const response = await apiClient.api.transactions[':id'].$delete({ param: { id } });
+      if (handleAuthError(response.status)) return false;
 
-      if (result.success) {
+      const result = await response.json();
+      if (result.success === true) {
         setData(prev => prev.filter(t => t.id !== id));
         return true;
       } else {
-        throw new Error(result.error || 'Deletion rejected by server');
+        throw new Error((result as any).error || 'Failed to delete record');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Delete operation failed');
@@ -110,13 +94,5 @@ export function useTransactions() {
     }
   };
 
-  return {
-    data,
-    isLoading,
-    error,
-    fetchTransactions,
-    addTransaction,
-    editTransaction,
-    deleteTransaction
-  };
+  return { data, isLoading, error, fetchTransactions, addTransaction, editTransaction, deleteTransaction };
 }

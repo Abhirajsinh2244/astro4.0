@@ -1,10 +1,8 @@
 ---
-import Layout from '@/layouts/Layout.astro';
-import DashboardView from '@/components/views/DashboardView';
+import Layout from '../layouts/Layout.astro';
+import DashboardView from '../components/views/DashboardView';
 ---
 
-<Layout title="SpendWise | Executive Dashboard">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-    <DashboardView client:load />
-  </div>
+<Layout title="Dashboard">
+  <DashboardView client:load />
 </Layout>

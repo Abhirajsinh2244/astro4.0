@@ -1,54 +1,58 @@
-import React from 'react';
-import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Receipt, Wallet, PiggyBank, Bell, User } from "lucide-react";
+// src/components/layout/TopNav.tsx
+import React, { useEffect, useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 
-const navItems = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Transactions', href: '/transactions', icon: Receipt },
-  { name: 'Budgets', href: '/budgets', icon: PiggyBank },
-];
+export default function TopNav(): React.JSX.Element {
+  const [currentPath, setCurrentPath] = useState('/');
+  const { isAuthenticated, logout } = useAuth();
 
-const TopNav = () => {
-  const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+  useEffect(() => {
+    setCurrentPath(window.location.pathname);
+  }, []);
+
+  const navLinkClass = (path: string) =>
+    `inline-flex items-center px-1 pt-1 border-b-2 text-sm font-semibold tracking-wide transition-colors ${
+      currentPath.includes(path)
+        ? 'border-emerald-500 text-gray-900'
+        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-900'
+    }`;
+
+  // Don't render complex UI until hydration determines auth state to avoid flashing
+  if (isAuthenticated === null) return <div className="h-16 bg-white border-b border-gray-200"></div>;
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between">
-        <div className="flex items-center gap-8">
-          <a href="/" className="flex items-center gap-2">
-            <div className="bg-primary p-1.5 rounded-lg">
-              <Wallet className="h-6 w-6 text-primary-foreground" />
+    <nav className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between h-16">
+          <div className="flex">
+            <div className="flex-shrink-0 flex items-center gap-3 mr-10">
+              <div className="w-8 h-8 bg-gray-900 rounded flex items-center justify-center text-white font-black text-lg shadow-sm">L</div>
+              <span className="text-xl font-extrabold text-gray-900 tracking-tighter">LedgerPro</span>
             </div>
-            <span className="text-xl font-bold tracking-tight">SpendWise</span>
-          </a>
-          
-          <div className="hidden md:flex items-center gap-1">
-            {navItems.map((item) => (
-              <a key={item.name} href={item.href}>
-                <Button 
-                  variant={currentPath === item.href ? "secondary" : "ghost"}
-                  className="flex items-center gap-2"
-                >
-                  <item.icon className="h-4 w-4" />
-                  {item.name}
-                </Button>
-              </a>
-            ))}
+            
+            {isAuthenticated && (
+              <div className="hidden sm:flex sm:space-x-8">
+                <a href="/dashboard" className={navLinkClass('/dashboard')}>Dashboard</a>
+                <a href="/transactions" className={navLinkClass('/transactions')}>Transactions</a>
+                <a href="/budgets" className={navLinkClass('/budgets')}>Budgets</a>
+              </div>
+            )}
           </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-2 right-2 h-2 w-2 bg-rose-500 rounded-full border-2 border-background" />
-          </Button>
-          <div className="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center cursor-pointer hover:bg-slate-300 transition-colors">
-            <User className="h-5 w-5 text-slate-600" />
+          
+          <div className="flex items-center">
+            {!isAuthenticated ? (
+              <div className="space-x-4">
+                <a href="/login" className="text-sm font-bold text-gray-600 hover:text-gray-900 transition-colors">Sign In</a>
+                <a href="/register" className="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-bold tracking-wide hover:bg-black transition-colors">Get Started</a>
+              </div>
+            ) : (
+              <button onClick={logout} className="text-sm font-bold tracking-wide text-red-500 hover:text-red-700 transition-colors uppercase">
+                Sign Out
+              </button>
+            )}
           </div>
         </div>
       </div>
     </nav>
   );
-};
-
-export default TopNav;
+}
