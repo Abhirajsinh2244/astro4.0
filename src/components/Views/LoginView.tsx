@@ -1,10 +1,10 @@
 // src/components/views/LoginView.tsx
 import React, { useState } from 'react';
-import { apiClient } from '@/lib/api';
-import { useAuth } from '@/hooks/useAuth';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { apiClient } from '@/lib/api.ts';
+import { useAuth } from '@/hooks/useAuth.ts';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card.tsx';
+import { Input } from '@/components/ui/input.tsx';
+import { Button } from '@/components/ui/button.tsx';
 
 export default function LoginView(): React.JSX.Element {
   const [email, setEmail] = useState('');

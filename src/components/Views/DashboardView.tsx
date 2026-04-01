@@ -1,6 +1,6 @@
 // src/components/views/DashboardView.tsx
 import React, { useEffect, useMemo } from 'react';
-import { useTransactions } from '@/hooks/useTransactions';
+import { useTransactions } from '@/hooks/useTransactions.ts';
 import CategoryReport from '@/components/reports/CategoryReport.tsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 

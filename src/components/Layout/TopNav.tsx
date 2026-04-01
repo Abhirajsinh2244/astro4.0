@@ -1,6 +1,6 @@
 // src/components/layout/TopNav.tsx
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth.ts';
 
 export default function TopNav(): React.JSX.Element {
   const [currentPath, setCurrentPath] = useState('/');
