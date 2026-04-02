@@ -67,7 +67,7 @@ export default function RegisterView(): React.JSX.Element {
                   Secure Passphrase (Min. 8)
                 </label>
                 <Input type="password" required minLength={8} value={password} onChange={e => setPassword(e.target.value)}
-                  className="h-10 text-sm font-medium" placeholder="Password" />
+                  className="h-10 text-sm font-medium" placeholder="Enter password" />
               </div>
             </div>
             <div className="pt-2">
