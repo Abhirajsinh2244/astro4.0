@@ -19,6 +19,7 @@ export default function LoginView(): React.JSX.Element {
     setError(null);
     try {
       const res = await apiClient.api.auth.login.$post({ json: { email, password } });
+      console.log('res',res)
       const data = await res.json();
       
       if (data.success && 'token' in data) {

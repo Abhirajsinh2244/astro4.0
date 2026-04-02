@@ -52,6 +52,7 @@ export const registerUser = async (c: Context) => {
 };
 
 export const loginUser = async (c: Context) => {
+  console.log('req',await c.req.json());
   const { email, password } = await c.req.json();
 
   // 1. Find the user
@@ -60,6 +61,8 @@ export const loginUser = async (c: Context) => {
     .select('*')
     .eq('email', email)
     .single();
+
+  console.log('User',user)
 
   if (error || !user) {
     return c.json(new ApiResponse(false, undefined, 'Invalid credentials'), 401);

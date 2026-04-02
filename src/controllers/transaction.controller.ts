@@ -8,6 +8,7 @@ interface JwtPayload { sub: string; }
 
 export const getAllTransactions = async (c: Context) => {
   const payload = c.get('jwtPayload') as JwtPayload;
+  console.log('Fetching transactions for user:', payload.sub);
   
   const { data, error } = await supabase
     .from('transactions')
